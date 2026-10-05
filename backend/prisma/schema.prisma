@@ -1,0 +1,64 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "mysql"; url = env("DATABASE_URL") }
+enum Role { ADMIN KARYAWAN }
+enum PublicationStatus { DRAFT PUBLISHED ARCHIVED }
+model User {
+  id Int @id @default(autoincrement())
+  name String
+  email String @unique
+  passwordHash String
+  role Role @default(KARYAWAN)
+  isActive Boolean @default(true)
+  isEmailVerified Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  otpChallenges OtpChallenge[]
+  resetTokens PasswordResetToken[]
+  progress PublicationProgress[]
+  publications Publication[] @relation("CreatedBy")
+}
+model OtpChallenge {
+  id Int @id @default(autoincrement())
+  codeHash String
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+  userId Int
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId, expiresAt])
+}
+model PasswordResetToken {
+  id Int @id @default(autoincrement())
+  tokenHash String @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+  userId Int
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+}
+model Publication {
+  id Int @id @default(autoincrement())
+  title String
+  summary String @db.Text
+  content String @db.LongText
+  imageUrl String?
+  status PublicationStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdById Int
+  createdBy User @relation("CreatedBy", fields:[createdById], references:[id])
+  progress PublicationProgress[]
+}
+model PublicationProgress {
+  id Int @id @default(autoincrement())
+  readAt DateTime?
+  understoodAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId Int
+  publicationId Int
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  publication Publication @relation(fields:[publicationId], references:[id], onDelete:Cascade)
+  @@unique([userId, publicationId])
+}
